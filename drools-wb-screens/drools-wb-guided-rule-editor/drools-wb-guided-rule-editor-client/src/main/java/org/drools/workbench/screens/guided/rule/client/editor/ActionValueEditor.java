@@ -19,6 +19,7 @@ package org.drools.workbench.screens.guided.rule.client.editor;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 import com.google.gwt.event.dom.client.ChangeEvent;
 import com.google.gwt.event.dom.client.ChangeHandler;
@@ -32,6 +33,7 @@ import com.google.gwt.event.shared.EventBus;
 import com.google.gwt.user.client.Command;
 import com.google.gwt.user.client.Window;
 import com.google.gwt.user.client.ui.Button;
+import com.google.gwt.user.client.ui.Composite;
 import com.google.gwt.user.client.ui.HTML;
 import com.google.gwt.user.client.ui.HasVerticalAlignment;
 import com.google.gwt.user.client.ui.HorizontalPanel;
@@ -52,10 +54,11 @@ import org.drools.workbench.models.datamodel.rule.SingleFieldConstraint;
 import org.drools.workbench.screens.guided.rule.client.editor.events.TemplateVariablesChangedEvent;
 import org.drools.workbench.screens.guided.rule.client.resources.GuidedRuleEditorResources;
 import org.drools.workbench.screens.guided.rule.client.resources.images.GuidedRuleEditorImages508;
+import org.drools.workbench.screens.guided.rule.client.util.FieldNatureUtil;
 import org.drools.workbench.screens.guided.rule.client.widget.EnumDropDown;
+import org.kie.workbench.common.widgets.client.datamodel.AsyncPackageDataModelOracle;
 import org.kie.workbench.common.widgets.client.widget.PopupDatePicker;
 import org.kie.workbench.common.widgets.client.widget.TextBoxFactory;
-import org.uberfire.ext.widgets.common.client.common.DirtyableComposite;
 import org.uberfire.ext.widgets.common.client.common.DropDownValueChanged;
 import org.uberfire.ext.widgets.common.client.common.InfoPopup;
 import org.uberfire.ext.widgets.common.client.common.SmallLabel;
@@ -65,43 +68,48 @@ import org.uberfire.ext.widgets.common.client.common.popups.FormStylePopup;
  * This provides for editing of fields in the RHS of a rule.
  */
 public class ActionValueEditor
-        extends DirtyableComposite {
+        extends Composite {
 
+    private String factType;
     private ActionFieldValue value;
-    private DropDownData enums;
+    private ActionFieldValue[] values;
+    private DropDownData dropDownData;
     private SimplePanel root;
     private RuleModeller modeller;
     private RuleModel model;
+    private AsyncPackageDataModelOracle oracle;
     private EventBus eventBus;
     private String variableType = null;
     private boolean readOnly;
     private Command onChangeCommand;
 
-    public ActionValueEditor( final ActionFieldValue val,
-                              final DropDownData enums,
+    public ActionValueEditor( final String factType,
+                              final ActionFieldValue value,
+                              final ActionFieldValue[] values,
                               final RuleModeller modeller,
                               final EventBus eventBus,
                               final String variableType,
                               final boolean readOnly ) {
         this.readOnly = readOnly;
-
-        if ( val.getType().equals( DataType.TYPE_BOOLEAN ) ) {
-            this.enums = DropDownData.create( new String[]{ "true", "false" } );
-        } else {
-            this.enums = enums;
-        }
         this.root = new SimplePanel();
-        this.value = val;
+        this.factType = factType;
+        this.value = value;
+        this.values = values;
         this.modeller = modeller;
         this.model = modeller.getModel();
+        this.oracle = modeller.getDataModelOracle();
         this.eventBus = eventBus;
         this.variableType = variableType;
+
         refresh();
         initWidget( root );
     }
 
-    private void refresh() {
+    public void refresh() {
         root.clear();
+
+        //Initialise drop-down data
+        getDropDownData();
 
         //If undefined let the user pick
         if ( value.getNature() == FieldNatureType.TYPE_UNDEFINED ) {
@@ -134,7 +142,7 @@ public class ActionValueEditor
         }
 
         //Enumerations - since this does not use FieldNature it should follow those that do
-        if ( enums != null && ( enums.getFixedList() != null || enums.getQueryExpression() != null ) ) {
+        if ( dropDownData != null && ( dropDownData.getFixedList() != null || dropDownData.getQueryExpression() != null ) ) {
             Widget list = wrap( enumEditor() );
             root.add( list );
             return;
@@ -182,7 +190,6 @@ public class ActionValueEditor
     }
 
     private void doTypeChosen() {
-        makeDirty();
         executeOnChangeCommand();
         executeOnTemplateVariablesChange();
         refresh();
@@ -221,7 +228,6 @@ public class ActionValueEditor
                     ListBox w = (ListBox) event.getSource();
                     value.setValue( "=" + w.getValue( w.getSelectedIndex() ) );
                     executeOnChangeCommand();
-                    makeDirty();
                     refresh();
                 }
             } );
@@ -253,11 +259,11 @@ public class ActionValueEditor
                                                                                     String newValue ) {
                                                               value.setValue( newValue );
                                                               executeOnChangeCommand();
-                                                              makeDirty();
                                                           }
                                                       },
-                                                      enums,
+                                                      dropDownData,
                                                       modeller.getPath() );
+
         return enumDropDown;
     }
 
@@ -291,7 +297,6 @@ public class ActionValueEditor
             public void onValueChange( final ValueChangeEvent<String> event ) {
                 value.setValue( event.getValue() );
                 executeOnChangeCommand();
-                makeDirty();
             }
         } );
         box.setText( assertValue() );
@@ -550,14 +555,14 @@ public class ActionValueEditor
     }
 
     private boolean isEnumEquivalent( String[] values ) {
-        if ( values == null || this.enums.getFixedList() == null ) {
+        if ( values == null || this.dropDownData.getFixedList() == null ) {
             return false;
         }
-        if ( values.length != this.enums.getFixedList().length ) {
+        if ( values.length != this.dropDownData.getFixedList().length ) {
             return false;
         }
         for ( int i = 0; i < values.length; i++ ) {
-            if ( !values[ i ].equals( this.enums.getFixedList()[ i ] ) ) {
+            if ( !values[ i ].equals( this.dropDownData.getFixedList()[ i ] ) ) {
                 return false;
             }
         }
@@ -584,6 +589,19 @@ public class ActionValueEditor
 
     public void setOnChangeCommand( Command onChangeCommand ) {
         this.onChangeCommand = onChangeCommand;
+    }
+
+    private DropDownData getDropDownData() {
+        //Set applicable flags and reference data depending upon type
+        if ( DataType.TYPE_BOOLEAN.equals( value.getType() ) ) {
+            this.dropDownData = DropDownData.create( new String[]{ "true", "false" } );
+        } else {
+            final Map<String, String> currentValueMap = FieldNatureUtil.toMap( this.values );
+            this.dropDownData = oracle.getEnums( factType,
+                                                 value.getField(),
+                                                 currentValueMap );
+        }
+        return dropDownData;
     }
 
     //Signal (potential) change in Template variables

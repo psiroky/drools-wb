@@ -45,7 +45,6 @@ import org.uberfire.client.mvp.PlaceManager;
 import org.uberfire.client.workbench.events.ChangeTitleWidgetEvent;
 import org.uberfire.ext.widgets.common.client.callbacks.DefaultErrorCallback;
 import org.uberfire.ext.widgets.common.client.callbacks.HasBusyIndicatorDefaultErrorCallback;
-import org.uberfire.lifecycle.IsDirty;
 import org.uberfire.lifecycle.OnClose;
 import org.uberfire.lifecycle.OnMayClose;
 import org.uberfire.lifecycle.OnStartup;
@@ -113,14 +112,16 @@ public class WorkItemsEditorPresenter
                     return;
                 }
 
-                resetEditorPages( content.getOverview() );
+                resetEditorPages(content.getOverview());
 
                 metadata = content.getOverview().getMetadata();
 
                 final String definition = content.getDefinition();
                 final List<String> workItemImages = content.getWorkItemImages();
-                view.setContent( definition,
-                                 workItemImages );
+                view.setContent(definition,
+                                workItemImages);
+
+                setOriginalHash(view.getContent().hashCode());
                 view.hideBusyIndicator();
             }
         };
@@ -152,20 +153,15 @@ public class WorkItemsEditorPresenter
                                              @Override
                                              public void execute( final String commitMessage ) {
                                                  view.showSaving();
-                                                 workItemsService.call( getSaveSuccessCallback(),
-                                                                        new HasBusyIndicatorDefaultErrorCallback( view ) ).save( versionRecordManager.getCurrentPath(),
-                                                                                                                                 view.getContent(),
-                                                                                                                                 metadata,
-                                                                                                                                 commitMessage );
+                                                 workItemsService.call( getSaveSuccessCallback(view.getContent().hashCode()),
+                                                                        new HasBusyIndicatorDefaultErrorCallback(view)).save(versionRecordManager.getCurrentPath(),
+                                                                                                                             view.getContent(),
+                                                                                                                             metadata,
+                                                                                                                             commitMessage );
                                              }
                                          }
                                        );
         concurrentUpdateSessionInfo = null;
-    }
-
-    @IsDirty
-    public boolean isDirty() {
-        return view.isDirty();
     }
 
     @OnClose
@@ -174,11 +170,8 @@ public class WorkItemsEditorPresenter
     }
 
     @OnMayClose
-    public boolean checkIfDirty() {
-        if ( isDirty() ) {
-            return view.confirmClose();
-        }
-        return true;
+    public boolean mayClose() {
+        return super.mayClose(view.getContent().hashCode());
     }
 
     @WorkbenchPartTitle

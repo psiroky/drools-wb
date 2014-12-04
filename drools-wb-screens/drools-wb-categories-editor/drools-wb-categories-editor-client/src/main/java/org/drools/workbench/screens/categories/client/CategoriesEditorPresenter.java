@@ -36,7 +36,6 @@ import org.uberfire.client.annotations.WorkbenchPartTitle;
 import org.uberfire.client.annotations.WorkbenchPartTitleDecoration;
 import org.uberfire.client.annotations.WorkbenchPartView;
 import org.uberfire.ext.widgets.common.client.callbacks.HasBusyIndicatorDefaultErrorCallback;
-import org.uberfire.lifecycle.IsDirty;
 import org.uberfire.lifecycle.OnClose;
 import org.uberfire.lifecycle.OnMayClose;
 import org.uberfire.lifecycle.OnStartup;
@@ -95,7 +94,7 @@ public class CategoriesEditorPresenter
                                              @Override
                                              public void execute( final String commitMessage ) {
                                                  view.showSaving();
-                                                 categoryService.call( getSaveSuccessCallback(),
+                                                 categoryService.call( getSaveSuccessCallback(view.getContent().hashCode()),
                                                                        new HasBusyIndicatorDefaultErrorCallback( view ) ).save( versionRecordManager.getCurrentPath(),
                                                                                                                                 view.getContent(),
                                                                                                                                 metadata,
@@ -109,16 +108,12 @@ public class CategoriesEditorPresenter
 
             @Override
             public void callback( final CategoriesModelContent content ) {
+                setOriginalHash(content.getCategories().hashCode());
                 resetEditorPages( content.getOverview() );
                 view.setContent( content.getCategories() );
                 view.hideBusyIndicator();
             }
         };
-    }
-
-    @IsDirty
-    public boolean isDirty() {
-        return view.isDirty();
     }
 
     @OnClose
@@ -127,11 +122,8 @@ public class CategoriesEditorPresenter
     }
 
     @OnMayClose
-    public boolean checkIfDirty() {
-        if ( isDirty() ) {
-            return view.confirmClose();
-        }
-        return true;
+    public boolean mayClose() {
+        return super.mayClose(view.getContent().hashCode());
     }
 
     @WorkbenchPartTitleDecoration

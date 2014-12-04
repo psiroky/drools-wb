@@ -49,7 +49,6 @@ import org.uberfire.client.annotations.WorkbenchPartTitleDecoration;
 import org.uberfire.client.annotations.WorkbenchPartView;
 import org.uberfire.ext.widgets.common.client.callbacks.DefaultErrorCallback;
 import org.uberfire.ext.widgets.common.client.callbacks.HasBusyIndicatorDefaultErrorCallback;
-import org.uberfire.lifecycle.IsDirty;
 import org.uberfire.lifecycle.OnClose;
 import org.uberfire.lifecycle.OnMayClose;
 import org.uberfire.lifecycle.OnStartup;
@@ -119,17 +118,18 @@ public class GuidedScoreCardEditorPresenter
                                                                         model,
                                                                         dataModel );
 
-                resetEditorPages( content.getOverview() );
+                resetEditorPages(content.getOverview());
                 addSourcePage();
 
-                addImportsTab( importsWidget );
+                addImportsTab(importsWidget);
 
-                view.setContent( model,
-                                 oracle );
-                importsWidget.setContent( oracle,
-                                          model.getImports(),
-                                          isReadOnly );
+                view.setContent(model,
+                                oracle);
+                importsWidget.setContent(oracle,
+                                         model.getImports(),
+                                         isReadOnly);
 
+                setOriginalHash(model.hashCode());
                 view.hideBusyIndicator();
             }
         };
@@ -175,11 +175,11 @@ public class GuidedScoreCardEditorPresenter
                                              @Override
                                              public void execute( final String comment ) {
                                                  view.showSaving();
-                                                 scoreCardEditorService.call( getSaveSuccessCallback(),
-                                                                              new HasBusyIndicatorDefaultErrorCallback( view ) ).save( versionRecordManager.getCurrentPath(),
-                                                                                                                                       view.getModel(),
-                                                                                                                                       metadata,
-                                                                                                                                       comment );
+                                                 scoreCardEditorService.call( getSaveSuccessCallback(model.hashCode()),
+                                                                              new HasBusyIndicatorDefaultErrorCallback( view)).save(versionRecordManager.getCurrentPath(),
+                                                                                                                                    view.getModel(),
+                                                                                                                                    metadata,
+                                                                                                                                    comment );
                                              }
                                          }
                                        );
@@ -206,22 +206,6 @@ public class GuidedScoreCardEditorPresenter
     public void onClose() {
         this.versionRecordManager.clear();
         this.oracleFactory.destroy( oracle );
-    }
-
-    @IsDirty
-    public boolean isDirty() {
-        if ( isReadOnly ) {
-            return false;
-        }
-        return ( view.isDirty() );
-    }
-
-    @OnMayClose
-    public boolean checkIfDirty() {
-        if ( isDirty() ) {
-            return view.confirmClose();
-        }
-        return true;
     }
 
     @WorkbenchPartTitleDecoration

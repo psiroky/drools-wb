@@ -25,7 +25,6 @@ import org.uberfire.client.annotations.WorkbenchPartTitleDecoration;
 import org.uberfire.client.annotations.WorkbenchPartView;
 import org.uberfire.ext.widgets.common.client.callbacks.DefaultErrorCallback;
 import org.uberfire.ext.widgets.common.client.callbacks.HasBusyIndicatorDefaultErrorCallback;
-import org.uberfire.lifecycle.IsDirty;
 import org.uberfire.lifecycle.OnClose;
 import org.uberfire.lifecycle.OnMayClose;
 import org.uberfire.lifecycle.OnStartup;
@@ -88,6 +87,7 @@ public class GlobalsEditorPresenter
                 }
 
                 model = content.getModel();
+
                 resetEditorPages( content.getOverview() );
                 addSourcePage();
 
@@ -97,6 +97,7 @@ public class GlobalsEditorPresenter
                                  fullyQualifiedClassNames,
                                  isReadOnly );
 
+                setOriginalHash(model.hashCode());
                 view.hideBusyIndicator();
             }
         };
@@ -128,11 +129,11 @@ public class GlobalsEditorPresenter
                                              @Override
                                              public void execute( final String comment ) {
                                                  view.showSaving();
-                                                 globalsEditorService.call( getSaveSuccessCallback(),
-                                                                            new HasBusyIndicatorDefaultErrorCallback( view ) ).save( versionRecordManager.getCurrentPath(),
-                                                                                                                                     model,
-                                                                                                                                     metadata,
-                                                                                                                                     comment );
+                                                 globalsEditorService.call( getSaveSuccessCallback(model.hashCode()),
+                                                                            new HasBusyIndicatorDefaultErrorCallback(view)).save(versionRecordManager.getCurrentPath(),
+                                                                                                                                 model,
+                                                                                                                                 metadata,
+                                                                                                                                 comment );
                                              }
                                          }
                                        );
@@ -160,20 +161,9 @@ public class GlobalsEditorPresenter
         this.versionRecordManager.clear();
     }
 
-    @IsDirty
-    public boolean isDirty() {
-        if ( isReadOnly ) {
-            return false;
-        }
-        return ( view.isDirty() );
-    }
-
     @OnMayClose
-    public boolean checkIfDirty() {
-        if ( isDirty() ) {
-            return view.confirmClose();
-        }
-        return true;
+    public boolean mayClose() {
+        return super.mayClose(model.hashCode());
     }
 
     @WorkbenchPartTitleDecoration

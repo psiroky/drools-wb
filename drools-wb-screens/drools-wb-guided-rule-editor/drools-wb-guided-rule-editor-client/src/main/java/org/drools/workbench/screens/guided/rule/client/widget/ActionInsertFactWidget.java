@@ -16,6 +16,9 @@
 
 package org.drools.workbench.screens.guided.rule.client.widget;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import com.google.gwt.event.dom.client.ChangeEvent;
 import com.google.gwt.event.dom.client.ChangeHandler;
 import com.google.gwt.event.dom.client.ClickEvent;
@@ -24,30 +27,29 @@ import com.google.gwt.event.shared.EventBus;
 import com.google.gwt.user.client.Command;
 import com.google.gwt.user.client.Window;
 import com.google.gwt.user.client.ui.Button;
+import com.google.gwt.user.client.ui.FlexTable;
 import com.google.gwt.user.client.ui.HTML;
 import com.google.gwt.user.client.ui.HorizontalPanel;
 import com.google.gwt.user.client.ui.Image;
 import com.google.gwt.user.client.ui.ListBox;
 import com.google.gwt.user.client.ui.TextBox;
 import com.google.gwt.user.client.ui.Widget;
-import org.drools.workbench.models.datamodel.oracle.DropDownData;
 import org.drools.workbench.models.datamodel.oracle.FieldAccessorsAndMutators;
 import org.drools.workbench.models.datamodel.oracle.ModelField;
 import org.drools.workbench.models.datamodel.rule.ActionFieldValue;
 import org.drools.workbench.models.datamodel.rule.ActionInsertFact;
 import org.drools.workbench.models.datamodel.rule.ActionInsertLogicalFact;
+import org.drools.workbench.models.datamodel.rule.FieldNatureType;
 import org.drools.workbench.screens.guided.rule.client.editor.ActionValueEditor;
 import org.drools.workbench.screens.guided.rule.client.editor.RuleModeller;
 import org.drools.workbench.screens.guided.rule.client.editor.events.TemplateVariablesChangedEvent;
 import org.drools.workbench.screens.guided.rule.client.resources.GuidedRuleEditorResources;
 import org.drools.workbench.screens.guided.rule.client.resources.images.GuidedRuleEditorImages508;
-import org.drools.workbench.screens.guided.rule.client.util.FieldNatureUtil;
 import org.kie.workbench.common.widgets.client.datamodel.AsyncPackageDataModelOracle;
 import org.kie.workbench.common.widgets.client.resources.HumanReadable;
 import org.kie.workbench.common.widgets.client.resources.i18n.HumanReadableConstants;
 import org.uberfire.client.callbacks.Callback;
 import org.uberfire.ext.widgets.common.client.common.ClickableLabel;
-import org.uberfire.ext.widgets.common.client.common.DirtyableFlexTable;
 import org.uberfire.ext.widgets.common.client.common.SmallLabel;
 import org.uberfire.ext.widgets.common.client.common.popups.FormStylePopup;
 
@@ -56,14 +58,15 @@ import org.uberfire.ext.widgets.common.client.common.popups.FormStylePopup;
  */
 public class ActionInsertFactWidget extends RuleModellerWidget {
 
-    private final DirtyableFlexTable layout;
+    private final FlexTable layout;
     private final ActionInsertFact model;
+    private ModelField[] fieldCompletions;
     private final String factType;
     private boolean readOnly;
 
-    private ModelField[] fieldCompletions;
-
     private boolean isFactTypeKnown;
+
+    private final Map<ActionFieldValue, ActionValueEditor> actionValueEditors = new HashMap<ActionFieldValue, ActionValueEditor>();
 
     public ActionInsertFactWidget( final RuleModeller mod,
                                    final EventBus eventBus,
@@ -72,7 +75,7 @@ public class ActionInsertFactWidget extends RuleModellerWidget {
         super( mod,
                eventBus );
         this.model = set;
-        this.layout = new DirtyableFlexTable();
+        this.layout = new FlexTable();
         this.factType = set.getFactType();
 
         AsyncPackageDataModelOracle oracle = this.getModeller().getDataModelOracle();
@@ -116,7 +119,7 @@ public class ActionInsertFactWidget extends RuleModellerWidget {
                                                   0,
                                                   2 );
 
-        DirtyableFlexTable inner = new DirtyableFlexTable();
+        FlexTable inner = new FlexTable();
         int col = 0;
 
         for ( int i = 0; i < model.getFieldValues().length; i++ ) {
@@ -159,24 +162,37 @@ public class ActionInsertFactWidget extends RuleModellerWidget {
     }
 
     private Widget valueEditor( final ActionFieldValue val ) {
-        AsyncPackageDataModelOracle oracle = this.getModeller().getDataModelOracle();
-        DropDownData enums = oracle.getEnums( this.factType,
-                                              val.getField(),
-                                              FieldNatureUtil.toMap( this.model.getFieldValues() ) );
-
-        ActionValueEditor actionValueEditor = new ActionValueEditor( val,
-                                                                     enums,
+        ActionValueEditor actionValueEditor = new ActionValueEditor( factType,
+                                                                     val,
+                                                                     model.getFieldValues(),
                                                                      this.getModeller(),
                                                                      this.getEventBus(),
                                                                      val.getType(),
                                                                      this.readOnly );
+
         actionValueEditor.setOnChangeCommand( new Command() {
             public void execute() {
+                refreshActionValueEditorsDropDownData( val );
                 setModified( true );
             }
         } );
 
+        //Keep a reference to the value editors so they can be refreshed for dependent enums
+        actionValueEditors.put( val,
+                                actionValueEditor );
+
         return actionValueEditor;
+    }
+
+    private void refreshActionValueEditorsDropDownData( final ActionFieldValue modifiedField ) {
+        for ( Map.Entry<ActionFieldValue, ActionValueEditor> e : actionValueEditors.entrySet() ) {
+            final ActionFieldValue afv = e.getKey();
+            if ( afv.getNature() == FieldNatureType.TYPE_LITERAL || afv.getNature() == FieldNatureType.TYPE_ENUM ) {
+                if ( !afv.equals( modifiedField ) ) {
+                    e.getValue().refresh();
+                }
+            }
+        }
     }
 
     private Widget fieldSelector( final ActionFieldValue val ) {

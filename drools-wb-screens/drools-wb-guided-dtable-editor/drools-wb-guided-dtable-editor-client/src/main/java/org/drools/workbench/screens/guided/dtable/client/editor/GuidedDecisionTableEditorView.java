@@ -26,9 +26,7 @@ public interface GuidedDecisionTableEditorView extends KieEditorView,
 
     GuidedDecisionTable52 getContent();
 
-    boolean isDirty();
-
-    void setNotDirty();
+    void onFocus();
 
     boolean confirmClose();
 

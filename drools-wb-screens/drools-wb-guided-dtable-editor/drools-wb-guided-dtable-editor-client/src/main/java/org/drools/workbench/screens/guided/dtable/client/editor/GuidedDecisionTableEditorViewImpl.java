@@ -67,6 +67,7 @@ public class GuidedDecisionTableEditorViewImpl
                                                      identity,
                                                      isReadOnly );
         panel.setWidget( this.editor );
+        editor.onFocus();
     }
 
     @Override
@@ -75,12 +76,13 @@ public class GuidedDecisionTableEditorViewImpl
     }
 
     @Override
-    public boolean isDirty() {
-        return false;
-    }
-
-    @Override
-    public void setNotDirty() {
+    public void onFocus() {
+        //The editor widget is not instantiated until setContent() which is invoked in an asynchronous callback in the Presenters onStartup method.
+        //The onFocus method is called synchronously after the Presenters onStartup method; but initially before setContent() has been executed.
+        if ( editor == null ) {
+            return;
+        }
+        editor.onFocus();
     }
 
     @Override

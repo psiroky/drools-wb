@@ -47,8 +47,8 @@ import org.uberfire.client.annotations.WorkbenchPartTitleDecoration;
 import org.uberfire.client.annotations.WorkbenchPartView;
 import org.uberfire.ext.widgets.common.client.callbacks.DefaultErrorCallback;
 import org.uberfire.ext.widgets.common.client.callbacks.HasBusyIndicatorDefaultErrorCallback;
-import org.uberfire.lifecycle.IsDirty;
 import org.uberfire.lifecycle.OnClose;
+import org.uberfire.lifecycle.OnFocus;
 import org.uberfire.lifecycle.OnMayClose;
 import org.uberfire.lifecycle.OnStartup;
 import org.uberfire.mvp.Command;
@@ -102,10 +102,19 @@ public class GuidedDecisionTableEditorPresenter
                     type );
     }
 
+    @OnFocus
+    public void onFocus() {
+        // The height of the Sidebar widget in the underlying Decorated Grid library is set to the offsetHeight() of the Header
+        // widget. When the Decision Table is not visible (i.e. it is not the top most editor in a TabPanel) offsetHeight() is zero
+        // and the Decision Table Header and Sidebar are not sized correctly. Therefore we need to ensure the widgets are sized
+        // correctly when the widget becomes visible.
+        view.onFocus();
+    }
+
     protected void loadContent() {
         view.showLoading();
         service.call( getModelSuccessCallback(),
-                      getNoSuchFileExceptionErrorCallback() ).loadContent( versionRecordManager.getCurrentPath() );
+                      getNoSuchFileExceptionErrorCallback() ).loadContent(versionRecordManager.getCurrentPath());
     }
 
     private RemoteCallback<GuidedDecisionTableEditorContent> getModelSuccessCallback() {
@@ -177,7 +186,7 @@ public class GuidedDecisionTableEditorPresenter
                                              @Override
                                              public void execute( final String commitMessage ) {
                                                  view.showSaving();
-                                                 service.call( getSaveSuccessCallback(),
+                                                 service.call( getSaveSuccessCallback(model.hashCode()),
                                                                new HasBusyIndicatorDefaultErrorCallback( view ) ).save( versionRecordManager.getCurrentPath(),
                                                                                                                         model,
                                                                                                                         metadata,
@@ -199,11 +208,6 @@ public class GuidedDecisionTableEditorPresenter
                       model );
     }
 
-    @IsDirty
-    public boolean isDirty() {
-        return view.isDirty();
-    }
-
     @OnClose
     public void onClose() {
         this.versionRecordManager.clear();
@@ -211,11 +215,8 @@ public class GuidedDecisionTableEditorPresenter
     }
 
     @OnMayClose
-    public boolean checkIfDirty() {
-        if ( isDirty() ) {
-            return view.confirmClose();
-        }
-        return true;
+    public boolean mayClose() {
+        return mayClose(model.hashCode());
     }
 
     @WorkbenchPartTitle

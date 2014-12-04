@@ -16,6 +16,9 @@
 
 package org.drools.workbench.screens.guided.rule.client.widget;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import com.google.gwt.event.dom.client.ChangeEvent;
 import com.google.gwt.event.dom.client.ChangeHandler;
 import com.google.gwt.event.dom.client.ClickEvent;
@@ -23,28 +26,27 @@ import com.google.gwt.event.dom.client.ClickHandler;
 import com.google.gwt.event.shared.EventBus;
 import com.google.gwt.user.client.Command;
 import com.google.gwt.user.client.Window;
+import com.google.gwt.user.client.ui.FlexTable;
 import com.google.gwt.user.client.ui.HorizontalPanel;
 import com.google.gwt.user.client.ui.Image;
 import com.google.gwt.user.client.ui.ListBox;
 import com.google.gwt.user.client.ui.Widget;
-import org.drools.workbench.models.datamodel.oracle.DropDownData;
 import org.drools.workbench.models.datamodel.oracle.FieldAccessorsAndMutators;
 import org.drools.workbench.models.datamodel.oracle.ModelField;
 import org.drools.workbench.models.datamodel.rule.ActionFieldValue;
 import org.drools.workbench.models.datamodel.rule.ActionInsertFact;
 import org.drools.workbench.models.datamodel.rule.ActionSetField;
 import org.drools.workbench.models.datamodel.rule.ActionUpdateField;
+import org.drools.workbench.models.datamodel.rule.FieldNatureType;
 import org.drools.workbench.screens.guided.rule.client.editor.ActionValueEditor;
 import org.drools.workbench.screens.guided.rule.client.editor.RuleModeller;
 import org.drools.workbench.screens.guided.rule.client.editor.events.TemplateVariablesChangedEvent;
 import org.drools.workbench.screens.guided.rule.client.resources.GuidedRuleEditorResources;
 import org.drools.workbench.screens.guided.rule.client.resources.images.GuidedRuleEditorImages508;
-import org.drools.workbench.screens.guided.rule.client.util.FieldNatureUtil;
 import org.kie.workbench.common.widgets.client.datamodel.AsyncPackageDataModelOracle;
 import org.kie.workbench.common.widgets.client.resources.HumanReadable;
 import org.uberfire.client.callbacks.Callback;
 import org.uberfire.ext.widgets.common.client.common.ClickableLabel;
-import org.uberfire.ext.widgets.common.client.common.DirtyableFlexTable;
 import org.uberfire.ext.widgets.common.client.common.SmallLabel;
 import org.uberfire.ext.widgets.common.client.common.popups.FormStylePopup;
 import org.uberfire.ext.widgets.common.client.common.popups.errors.ErrorPopup;
@@ -55,13 +57,15 @@ import org.uberfire.ext.widgets.common.client.common.popups.errors.ErrorPopup;
 public class ActionSetFieldWidget extends RuleModellerWidget {
 
     final private ActionSetField model;
-    final private DirtyableFlexTable layout;
+    final private FlexTable layout;
     private boolean isBoundFact = false;
     private ModelField[] fieldCompletions;
     private String variableClass;
     private boolean readOnly;
 
     private boolean isFactTypeKnown;
+
+    private final Map<ActionFieldValue, ActionValueEditor> actionValueEditors = new HashMap<ActionFieldValue, ActionValueEditor>();
 
     public ActionSetFieldWidget( RuleModeller mod,
                                  EventBus eventBus,
@@ -70,7 +74,7 @@ public class ActionSetFieldWidget extends RuleModellerWidget {
         super( mod,
                eventBus );
         this.model = set;
-        this.layout = new DirtyableFlexTable();
+        this.layout = new FlexTable();
 
         layout.setStyleName( "model-builderInner-Background" );
 
@@ -278,11 +282,9 @@ public class ActionSetFieldWidget extends RuleModellerWidget {
             }
         }
 
-        DropDownData enums = oracle.getEnums( type,
-                                              val.getField(),
-                                              FieldNatureUtil.toMap( this.model.getFieldValues() ) );
-        ActionValueEditor actionValueEditor = new ActionValueEditor( val,
-                                                                     enums,
+        ActionValueEditor actionValueEditor = new ActionValueEditor( type,
+                                                                     val,
+                                                                     model.getFieldValues(),
                                                                      this.getModeller(),
                                                                      this.getEventBus(),
                                                                      val.getType(),
@@ -290,10 +292,27 @@ public class ActionSetFieldWidget extends RuleModellerWidget {
         actionValueEditor.setOnChangeCommand( new Command() {
 
             public void execute() {
+                refreshActionValueEditorsDropDownData( val );
                 setModified( true );
             }
         } );
+
+        //Keep a reference to the value editors so they can be refreshed for dependent enums
+        actionValueEditors.put( val,
+                                actionValueEditor );
+
         return actionValueEditor;
+    }
+
+    private void refreshActionValueEditorsDropDownData( final ActionFieldValue modifiedField ) {
+        for ( Map.Entry<ActionFieldValue, ActionValueEditor> e : actionValueEditors.entrySet() ) {
+            final ActionFieldValue afv = e.getKey();
+            if ( afv.getNature() == FieldNatureType.TYPE_LITERAL || afv.getNature() == FieldNatureType.TYPE_ENUM ) {
+                if ( !afv.equals( modifiedField ) ) {
+                    e.getValue().refresh();
+                }
+            }
+        }
     }
 
     private Widget fieldSelector( final ActionFieldValue val ) {
@@ -305,10 +324,6 @@ public class ActionSetFieldWidget extends RuleModellerWidget {
      */
     public boolean isBoundFact() {
         return isBoundFact;
-    }
-
-    public boolean isDirty() {
-        return layout.hasDirty();
     }
 
     @Override

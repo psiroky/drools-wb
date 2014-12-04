@@ -27,6 +27,8 @@ import com.google.gwt.event.logical.shared.ValueChangeHandler;
 import com.google.gwt.event.shared.EventBus;
 import com.google.gwt.user.client.Command;
 import com.google.gwt.user.client.Window;
+import com.google.gwt.user.client.ui.Composite;
+import com.google.gwt.user.client.ui.FlexTable;
 import com.google.gwt.user.client.ui.HTML;
 import com.google.gwt.user.client.ui.HasHorizontalAlignment;
 import com.google.gwt.user.client.ui.HasVerticalAlignment;
@@ -42,14 +44,11 @@ import org.drools.workbench.screens.guided.rule.client.resources.images.GuidedRu
 import org.drools.workbench.screens.guided.rule.client.widget.FactTypeKnownValueChangeEvent;
 import org.drools.workbench.screens.guided.rule.client.widget.FactTypeKnownValueChangeHandler;
 import org.drools.workbench.screens.guided.rule.client.widget.RuleModellerWidget;
-import org.guvnor.common.services.shared.security.UserCapabilities;
 import org.kie.workbench.common.widgets.client.datamodel.AsyncPackageDataModelOracle;
 import org.kie.workbench.common.widgets.client.resources.CommonAltedImages;
 import org.kie.workbench.common.widgets.client.ruleselector.RuleSelector;
 import org.uberfire.backend.vfs.Path;
 import org.uberfire.ext.widgets.common.client.common.ClickableLabel;
-import org.uberfire.ext.widgets.common.client.common.DirtyableComposite;
-import org.uberfire.ext.widgets.common.client.common.DirtyableFlexTable;
 import org.uberfire.ext.widgets.common.client.common.DirtyableHorizontalPane;
 import org.uberfire.ext.widgets.common.client.common.DirtyableVerticalPane;
 import org.uberfire.ext.widgets.common.client.common.SmallLabel;
@@ -58,11 +57,11 @@ import org.uberfire.ext.widgets.common.client.common.popups.errors.ErrorPopup;
 /**
  * This is the parent widget that contains the model based rule builder.
  */
-public class RuleModeller extends DirtyableComposite
+public class RuleModeller extends Composite
         implements
         RuleModelEditor {
 
-    private DirtyableFlexTable layout;
+    private FlexTable layout;
     private RuleModel model;
     private AsyncPackageDataModelOracle oracle;
     private RuleModellerConfiguration configuration;
@@ -147,7 +146,7 @@ public class RuleModeller extends DirtyableComposite
     }
 
     protected void doLayout() {
-        layout = new DirtyableFlexTable();
+        layout = new FlexTable();
         initWidget();
         layout.setStyleName( "model-builder-Background" );
         initWidget( layout );
@@ -335,10 +334,6 @@ public class RuleModeller extends DirtyableComposite
     }
 
     private boolean showAttributes() {
-        if ( !UserCapabilities.canSeeModulesTree() ) {
-            return false;
-        }
-
         return !this.configuration.isHideAttributes();
     }
 
@@ -348,7 +343,6 @@ public class RuleModeller extends DirtyableComposite
 
     public void refreshWidget() {
         initWidget();
-        makeDirty();
     }
 
     private Widget getAddAttribute() {
@@ -395,7 +389,7 @@ public class RuleModeller extends DirtyableComposite
                                                                  eventBus,
                                                                  action,
                                                                  readOnly );
-            w.addOnModifiedCommand(this.onWidgetModifiedCommand);
+            w.addOnModifiedCommand( this.onWidgetModifiedCommand );
 
             widget.add( wrapRHSWidget( model,
                                        i,
@@ -435,7 +429,7 @@ public class RuleModeller extends DirtyableComposite
 
             if ( !w.isFactTypeKnown() ) {
                 addInvalidPatternIcon();
-                addFactTypeKnownValueChangeHandler(w, currentLayoutRow);
+                addFactTypeKnownValueChangeHandler( w, currentLayoutRow );
             }
 
             final int index = i;
@@ -507,40 +501,40 @@ public class RuleModeller extends DirtyableComposite
             IPattern pattern = model.lhs[ i ];
 
             final RuleModellerWidget widget = getWidgetFactory().getWidget( this,
-                                                                 eventBus,
-                                                                 pattern,
-                                                                 readOnly );
-            widget.addOnModifiedCommand(this.onWidgetModifiedCommand);
+                                                                            eventBus,
+                                                                            pattern,
+                                                                            readOnly );
+            widget.addOnModifiedCommand( this.onWidgetModifiedCommand );
 
-            vert.add(wrapLHSWidget(model,
-                    i,
-                    widget));
-            vert.add(spacerWidget());
+            vert.add( wrapLHSWidget( model,
+                                     i,
+                                     widget ) );
+            vert.add( spacerWidget() );
 
             layout.setWidget( currentLayoutRow,
                               0,
                               new DirtyableHorizontalPane() );
-            layout.setWidget(currentLayoutRow,
-                    1,
-                    new DirtyableHorizontalPane());
+            layout.setWidget( currentLayoutRow,
+                              1,
+                              new DirtyableHorizontalPane() );
 
-            layout.setWidget(currentLayoutRow,
-                    2,
-                    this.wrapLineNumber(i + 1,
-                            true));
-            layout.getFlexCellFormatter().setHorizontalAlignment(currentLayoutRow,
-                    2,
-                    HasHorizontalAlignment.ALIGN_CENTER);
-            layout.getFlexCellFormatter().setVerticalAlignment(currentLayoutRow,
-                    2,
-                    HasVerticalAlignment.ALIGN_MIDDLE);
+            layout.setWidget( currentLayoutRow,
+                              2,
+                              this.wrapLineNumber( i + 1,
+                                                   true ) );
+            layout.getFlexCellFormatter().setHorizontalAlignment( currentLayoutRow,
+                                                                  2,
+                                                                  HasHorizontalAlignment.ALIGN_CENTER );
+            layout.getFlexCellFormatter().setVerticalAlignment( currentLayoutRow,
+                                                                2,
+                                                                HasVerticalAlignment.ALIGN_MIDDLE );
 
-            layout.setWidget(currentLayoutRow,
-                    3,
-                    vert);
-            layout.getFlexCellFormatter().setHorizontalAlignment(currentLayoutRow,
-                    3,
-                    HasHorizontalAlignment.ALIGN_LEFT);
+            layout.setWidget( currentLayoutRow,
+                              3,
+                              vert );
+            layout.getFlexCellFormatter().setHorizontalAlignment( currentLayoutRow,
+                                                                  3,
+                                                                  HasHorizontalAlignment.ALIGN_LEFT );
             layout.getFlexCellFormatter().setVerticalAlignment( currentLayoutRow,
                                                                 3,
                                                                 HasVerticalAlignment.ALIGN_TOP );
@@ -550,7 +544,7 @@ public class RuleModeller extends DirtyableComposite
 
             if ( !widget.isFactTypeKnown() ) {
                 addInvalidPatternIcon();
-                addFactTypeKnownValueChangeHandler(widget, currentLayoutRow);
+                addFactTypeKnownValueChangeHandler( widget, currentLayoutRow );
             }
 
             final int index = i;
@@ -585,18 +579,19 @@ public class RuleModeller extends DirtyableComposite
 
     }
 
-    private void addFactTypeKnownValueChangeHandler(final RuleModellerWidget widget, final int layoutRow) {
-        widget.addFactTypeKnownValueChangeHandler(new FactTypeKnownValueChangeHandler() {
+    private void addFactTypeKnownValueChangeHandler( final RuleModellerWidget widget,
+                                                     final int layoutRow ) {
+        widget.addFactTypeKnownValueChangeHandler( new FactTypeKnownValueChangeHandler() {
             @Override
-            public void onValueChanged(FactTypeKnownValueChangeEvent factTypeKnownValueChangeEvent) {
-                    if (!widget.isFactTypeKnown()) {
+            public void onValueChanged( FactTypeKnownValueChangeEvent factTypeKnownValueChangeEvent ) {
+                if ( !widget.isFactTypeKnown() ) {
                     addInvalidPatternIcon();
                 } else {
-                    clearLineIcons(layoutRow,
-                            0);
+                    clearLineIcons( layoutRow,
+                                    0 );
                 }
             }
-        });
+        } );
     }
 
     private void addInvalidPatternIcon() {
@@ -631,7 +626,7 @@ public class RuleModeller extends DirtyableComposite
     private Widget wrapLHSWidget( final RuleModel model,
                                   int i,
                                   RuleModellerWidget w ) {
-        final DirtyableFlexTable wrapper = new DirtyableFlexTable();
+        final FlexTable wrapper = new FlexTable();
         final Image remove = GuidedRuleEditorImages508.INSTANCE.DeleteItemSmall();
         remove.setTitle( GuidedRuleEditorResources.CONSTANTS.RemoveThisENTIREConditionAndAllTheFieldConstraintsThatBelongToIt() );
         final int idx = i;
@@ -676,7 +671,7 @@ public class RuleModeller extends DirtyableComposite
     private Widget wrapRHSWidget( final RuleModel model,
                                   int i,
                                   RuleModellerWidget w ) {
-        final DirtyableFlexTable wrapper = new DirtyableFlexTable();
+        final FlexTable wrapper = new FlexTable();
         final Image remove = GuidedRuleEditorImages508.INSTANCE.DeleteItemSmall();
         remove.setTitle( GuidedRuleEditorResources.CONSTANTS.RemoveThisAction() );
         final int idx = i;
@@ -793,11 +788,6 @@ public class RuleModeller extends DirtyableComposite
      */
     public boolean isVariableNameUsed( String name ) {
         return model.isVariableNameUsed( name ) || getDataModelOracle().isGlobalVariable( name );
-    }
-
-    @Override
-    public boolean isDirty() {
-        return ( layout.hasDirty() || dirtyflag );
     }
 
     public AsyncPackageDataModelOracle getDataModelOracle() {

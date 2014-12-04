@@ -47,7 +47,6 @@ import org.uberfire.client.callbacks.Callback;
 import org.uberfire.client.workbench.type.ClientResourceType;
 import org.uberfire.ext.widgets.common.client.callbacks.DefaultErrorCallback;
 import org.uberfire.ext.widgets.common.client.callbacks.HasBusyIndicatorDefaultErrorCallback;
-import org.uberfire.lifecycle.IsDirty;
 import org.uberfire.lifecycle.OnClose;
 import org.uberfire.lifecycle.OnMayClose;
 import org.uberfire.lifecycle.OnStartup;
@@ -135,6 +134,7 @@ public class DRLEditorPresenter
                                      fullyQualifiedClassNames );
                 }
                 view.hideBusyIndicator();
+                setOriginalHash(view.getContent().hashCode());
             }
 
             private String assertContent( final String drl ) {
@@ -191,20 +191,15 @@ public class DRLEditorPresenter
                                              @Override
                                              public void execute( final String commitMessage ) {
                                                  view.showSaving();
-                                                 drlTextEditorService.call( getSaveSuccessCallback(),
-                                                                            new HasBusyIndicatorDefaultErrorCallback( view ) ).save( versionRecordManager.getCurrentPath(),
-                                                                                                                                     view.getContent(),
-                                                                                                                                     metadata,
-                                                                                                                                     commitMessage );
+                                                 drlTextEditorService.call( getSaveSuccessCallback(view.getContent().hashCode()),
+                                                                            new HasBusyIndicatorDefaultErrorCallback(view)).save(versionRecordManager.getCurrentPath(),
+                                                                                                                                 view.getContent(),
+                                                                                                                                 metadata,
+                                                                                                                                 commitMessage );
                                              }
                                          }
                                        );
         concurrentUpdateSessionInfo = null;
-    }
-
-    @IsDirty
-    public boolean isDirty() {
-        return view.isDirty();
     }
 
     @OnClose
@@ -213,11 +208,8 @@ public class DRLEditorPresenter
     }
 
     @OnMayClose
-    public boolean checkIfDirty() {
-        if ( isDirty() ) {
-            return view.confirmClose();
-        }
-        return true;
+    public boolean mayClose() {
+        return super.mayClose(view.getContent().hashCode());
     }
 
     @WorkbenchPartTitleDecoration
