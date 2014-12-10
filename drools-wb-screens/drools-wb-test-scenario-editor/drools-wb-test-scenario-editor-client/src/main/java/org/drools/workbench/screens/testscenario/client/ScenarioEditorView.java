@@ -9,6 +9,7 @@ import org.kie.workbench.common.widgets.client.datamodel.AsyncPackageDataModelOr
 import org.kie.workbench.common.widgets.metadata.client.KieEditorView;
 import org.uberfire.backend.vfs.ObservablePath;
 import org.uberfire.client.callbacks.Callback;
+import org.uberfire.ext.editor.commons.client.history.VersionRecordManager;
 
 public interface ScenarioEditorView
         extends IsWidget,
@@ -18,12 +19,9 @@ public interface ScenarioEditorView
                     final boolean isReadOnly,
                     final Scenario scenario,
                     final Overview overview,
-                    final String version,
                     final AsyncPackageDataModelOracle oracle,
                     final Caller<ScenarioTestEditorService> service, Callback<Scenario> callback);
 
-    void showSaveSuccessful();
-
-    void handleNoSuchFileException();
+    void setVersionRecordManager(VersionRecordManager versionRecordManager);
 
 }

@@ -4,7 +4,6 @@ import java.io.ByteArrayInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.StringWriter;
-import java.nio.charset.Charset;
 import javax.inject.Inject;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -49,7 +48,7 @@ public class PackageImportHelper {
         try{
             pkName =pkg.getPackageName();
 
-            if(pkName!=null && pkg.getPackageName().endsWith( EncodingUtil.decode( resource.getFileName() ))){
+            if(pkName!=null && pkg.getPackageName().endsWith(EncodingUtil.decode(resource.getFileName()))){
                 pkName = pkg.getPackageName().substring(0,pkg.getPackageName().indexOf(EncodingUtil.decode(resource.getFileName()))-1);
             }
         }catch (Exception e){
@@ -113,21 +112,13 @@ public class PackageImportHelper {
         return xml;
     }
 
-    // Maintained (for now) for legacy purposes
     public String assertPackageImportDRL( final String drl,
-            final Path resource ) {
-        return packageHeaderInfo != null ? assertPackageImportDRL( drl, packageHeaderInfo.getHeader(), resource ) :
-                                           assertPackageImportDRL( drl, "", resource );
-    }
-
-    public String assertPackageImportDRL( final String drl,
-                                          final String packageHeader,
                                           final Path resource ) {
-        if ( packageHeader == null ) {
+        if ( packageHeaderInfo.getHeader() == null ) {
             return drl;
         }
 
-        final Imports imports = ImportsParser.parseImports( packageHeader );
+        final Imports imports = ImportsParser.parseImports( packageHeaderInfo.getHeader() );
         if ( imports == null || drl.toLowerCase().indexOf("import ")!=-1) {
             return drl;
         }
@@ -141,21 +132,13 @@ public class PackageImportHelper {
         return sb.toString();
     }
 
-    // Maintained (for now) for legacy purposes
     public String assertPackageImportXML( final String xml,
                                           final Path resource ) {
-        return packageHeaderInfo != null ? assertPackageImportXML( xml, packageHeaderInfo.getHeader(), resource ) :
-                                           assertPackageImportXML( xml, "", resource );
-    }
-
-    public String assertPackageImportXML( final String xml,
-                                          final String packageHeader,
-                                          final Path resource ) {
-        if ( packageHeader == null ) {
+        if ( packageHeaderInfo.getHeader() == null ) {
             return xml;
         }
 
-        final Imports imports = ImportsParser.parseImports( packageHeader );
+        final Imports imports = ImportsParser.parseImports( packageHeaderInfo.getHeader() );
         if ( imports == null ) {
             return xml;
         }
